@@ -33,8 +33,12 @@ websocket.on('open', function open() {
     console.log("Server connected!");
 });
 
+//array of status moves
+const hazards = ["Stealth Rocks", "Toxic Spikes", "Spikes"]
+const statuses = ["Toxic", "Burn"]
 //This is an array filled with all the data sent to me by the server since the bot has last been started
 let dataArr = [];
+let statusArr = [];
 //when the websocket sends a message 
 websocket.on('message', async function incoming(data) {
     let realdata = data.split("\n");
@@ -46,6 +50,15 @@ websocket.on('message', async function incoming(data) {
         //logs in
         websocket.send(`|/trn iGLBot,128,${assertion}|`);
     }
+    let p1a = "";
+    let p2a = "";
+    if (data.startsWith(`|switch|`)) {
+        let arr = data.split("|");
+        if (data.includes("p1a"))
+            p1a = arr[2];
+        else if (data.includes("p2a"))
+            p2a = arr[2];
+    }
 
     let players = [];
     let pokes1 = [];
@@ -56,7 +69,21 @@ websocket.on('message', async function incoming(data) {
     for (let line of realdata) {
         dataArr.push(line);
         let linenew = line.substring(1, );
+        console.log("Line: " + linenew)
         let parts = linenew.split("|");
+
+        //used a move
+        //it looks like this: |move|p1a: Manaphy|Ice Beam|p2a: Summer time
+        if (linenew.startsWith(`move`)) 
+            if (hazards.includes(parts[2]))
+                statusArr.push(`${parts[1].substring(5,)} used ${parts[2]} on ${parts[3].substring(5,)}`);
+                
+        //|-status|p2a: Summer time|tox
+        else if (linenew.startsWith(`-status`) || (linenew.startsWith(`-start`) && linenew.endsWith(`confusion`))) {
+            let arr = dataArr[dataArr.length - 2].substring(1, ).split("|");
+            let placeholder = parts[2].substring(0,3);
+            statusArr.push(`${(placeholder === 'p2a' ? p2a : p1a)} used ${arr[2]} on ${(placeholder === 'p1a' ? p1a : p2a)}`);
+        }
 
         //|player|p2|infernapeisawesome|1|
         if (linenew.startsWith(`player`)) {
@@ -66,33 +93,132 @@ websocket.on('message', async function incoming(data) {
 
         //|poke|p1|Hatterene, F|
         else if (linenew.startsWith(`poke`)) {
-            if (parts[1] === "p1") {
+            if (parts[1] === "p1")
                 pokes1.push(parts[2]);
-            }
-            else if (parts[1] === "p2") {
+
+            else if (parts[1] === "p2")
                 pokes2.push(parts[2]);
-            }
+
             console.log("Pokes1: " + pokes1);
             console.log("Pokes2: " + pokes2);
         }
 
         /**
-         *  |move|p1a: Vaporeon|Scald|p2a: Tyranitar
-         *  |-supereffective|p2a: Tyranitar
-         *  |-damage|p2a: Tyranitar|0 fnt
-         *  |faint|p2a: Tyranitar 
+         * |switch|p1a: Shedinja|Shedinja|100/100
+         * |-damage|p1a: Shedinja|0 fnt|[from] Stealth Rock
+         * |faint|p1a: Shedinja
+
+        or
+
+         * |move|p2a: Drifloon|Self-Destruct|p1a: Tapu Fini
+         * |-damage|p1a: Tapu Fini|83/100
+         * |faint|p2a: Drifloon
+
+        or
+
+         * |-activate|p2a: Drifloon|move: Destiny Bond
+         * |faint|p1a: Shedinja
+
+        or
+
+         * |-damage|p1a: Drifloon|0 fnt|[from] recoil
+         * |faint|p1a: Drifloon
+
+        or
+
+         * |-activate|p2a: Shedinja|confusion
+         * |-damage|p2a: Shedinja|0 fnt|[from] confusion
+         * |faint|p2a: Shedinja
+
+        or
+
+         * |move|p1a: Xurkitree|Thunderbolt|p2a: Toxapex
+         |-supereffective|p2a: Toxapex
+|-damage|p2a: Toxapex|0 fnt
+|faint|p2a: Toxapex
+         * 
+        or
+
+        |move|p2a: Toxtricity|Boomburst|p1a: Xurkitree
+|-damage|p1a: Xurkitree|0 fnt
+|faint|p1a: Xurkitree
+         * 
+         * |-damage|p1a: Grookey|0 fnt|[from] psn
+         * |faint|p1a: Grookey
         */
-        else if (linenew.startsWith(`-danger`) && linenew.endsWith(`0 fnt`)) {
-            killer = dataArr[dataArr.length - 3].substring(1,).split("|")[1].substring(5,);
-            victim = dataArr[dataArr.length - 3].substring(1,).split("|")[3].substring(5,);
-            console.log(killer + " killed " + victim);
-        }
+       else if (linenew.startsWith("faint")) {
+           let prevLinenew = dataArr[dataArr.length - 1];
+
+           //specific types of kills
+           if (prevLinenew.startsWith("-damage")) {
+                if (prevLinenew.endsWith("psn")) {
+                    let poisonMoves = ["Baneful Bunker", "Cross Poison", "Fling", "Gunk Shot", "Poison Fang", "Poison Gas",
+                                    "Poison Jab", "Poison Powder", "Poison Sting", "Poison Tail", "Psycho Shift",
+                                    "Sludge", "Sludge Bomb", "Sludge Wave", "Smog", "Toxic", "Toxic Spikes",
+                                    "Toxic Thread", "Twineedle"];
+                    for (let i = statusArr.length - 1; i >= 0; --i) {
+                        let current = statusArr[i].split(" ");
+                        if (current[4] === parts[1].substring(5,) && poisonMoves.contains(current[2])) {
+                            victim = current[4];
+                            killer = current[0];
+                        }
+                    }
+                }
+                else if (prevLinenew.endsWith("brn")) {
+                    let burnMoves = ["Beak Blast", "Blaze Kick", "Blue Flare", "Ember", "Fire Blast", "Fire Fang",
+                                    "Fire Punch", "Flame Wheel", "Flamethrower", "Flare Blitz", "Fling", "Heat Wave",
+                                    "Ice Burn", "Inferno", "Lava Plume", "Psycho Shift", "Sacred Fire", "Scald",
+                                    "Searing Shot", "Shadow Fire", "Sizzly Slide", "Steam Eruption",
+                                    "Tri Attack", "Will-O-Wisp"];
+                    for (let i = statusArr.length - 1; i >= 0; --i) {
+                        let current = statusArr[i].split(" ");
+                        if (current[4] === parts[1].substring(5,) && burnMoves.contains(current[2])) {
+                            victim = current[4];
+                            killer = current[0];
+                        }
+                    }
+                }
+                else if (prevLinenew.endsWith("confusion") || prevLinenew.endsWith("recoil")) {
+                    let otherMoves = ["Chatter", "Confuse Ray", "Confusion", "Dizzy Punch", "Dynamic Punch",
+                                    "Flatter", "Hurricane", "Psybeam", "Rock Climb", "Secret Power", "Shadow Panic", 
+                                    "Signal Beam", "Supersonic", "Swagger", "Sweet Kiss", "Teeter Dance", "Water Pulse",
+                                    //the rest of these moves are recoil
+                                    "Brave Bird", "Double-Edge", "Flare Blitz", "Head Charge", "Head Smash",
+                                    "High Jump Kick", "Jump Kick", "Light of Ruin", "Shadow End", "Shadow Rush",
+                                    "Steel Beam", "Struggle", "Submission", "Take Down", "Volt Tackle", "Wild Charge",
+                                    "Wood Hammer"];
+                    for (let i = statusArr.length - 1; i >= 0; --i) {
+                        let current = statusArr[i].split(" ");
+                        if (current[4] === parts[1].substring(5,) && otherMoves.contains(current[2])) {
+                            victim = current[4];
+                            killer = current[0];
+                        }
+                    }
+                }
+                else {
+                    let current;
+                    if (dataArr[dataArr.length - 2].startsWith(`|-supereffective|`))
+                        current = dataArr[dataArr.length - 3];
+                    else
+                        current = dataArr[dataArr.length - 2];
+                    
+                    let currentParts = current.substring(1,).split("|");
+                    killer = currentParts[1].substring(5,);
+                    victim = currentParts[3].substring(5,);
+                }
+           }
+           //this if statement is for things like destiny bond, perish song, explosion, and stuff
+           else if (prevLinenew.startsWith("-activate")) {
+
+           }
+       }
 
         //|win|infernapeisawesome
         else if (linenew.startsWith(`win`)) {
             winner = parts[1];
-            //websocket.send(`|/leave`)
             console.log(winner + " won!");
+            dataArr = [];
+            statusArr = [];
         }
     }
 });
