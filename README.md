@@ -1,5 +1,6 @@
 # Porygon v1.0
 ![](PorygonLogo.png)
+
 A Discord/Showdown/Google-Sheets bot that keeps track of deaths and kills as they happen live in a battle.
 This bot uses [sports.psim.us](http://sports.psim.us/) rather than the [official Showdown page](http://play.pokemonshowdown.com/).
 
