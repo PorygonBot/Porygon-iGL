@@ -11,8 +11,8 @@ node index.js
 ```
 
 ## Credits
-- @koreanpanda345 for general help with the code
-- @rishiosaur for async & Google Sheets help
+- [@koreanpanda345](https://github.com/koreanpanda345) for general help with the code
+- [@rishiosaur](https://github.com/rishiosaur) for async & Google Sheets help
 - MewsTheBest for the art
     - [Twitter](https://twitter.com/Mewsthebset)
     - [Portfolio](https://themewsthebest-portfolio.weebly.com/)
