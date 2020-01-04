@@ -16,12 +16,14 @@ const getUrls = require("get-urls");
 const {google} = require("googleapis");
 const plus = google.plus("v1");
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
-const {psUsername, psPassword, botToken} = require("./config.json");
+const {psUsername, psPassword, botToken, api_key} = require("./config.json");
 
 const keyfile = path.join(__dirname, "client_secret.json");
 const keys = JSON.parse(fs.readFileSync(keyfile));
 const scopes = [
-    'https://www.googleapis.com/auth/spreadsheets'
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/drive.file",
+    'https://www.googleapis.com/auth/spreadsheets',
 ];
 
 // Create an oAuth2 client to authorize the API call
@@ -41,22 +43,23 @@ let authorizeUrl = client.generateAuthUrl({
 // simple example, the only request to our webserver is to
 // /oauth2callback?code=<code>
 const app = express();
-app.get("/oauth2callback", (req, res) => {
+app.get("/oauth2", (req, res) => {
     const code = req.query.code;
     client.getToken(code, (err, tokens) => {
         if (err) {
             console.error("Error getting oAuth tokens:");
             throw err;
         }
-        client.credentials = tokens;
+        client.setCredentials(tokens);
         res.send("Authentication successful! Please return to the console.");
         server.close();
-        //listMajors(client); is an example of how you'd call the actual sheets function
     });
 });
+client.setCredentials()
 
 const server = app.listen(3000, () => {
     // open the browser to the authorize url to start the workflow
+    console.log(authorizeUrl);
     opn(authorizeUrl, { wait: false });
 });
 
@@ -81,7 +84,7 @@ websocket.on("open", function open() {
 let dataArr = [];
 let p1a = "";
 let p2a = "";
-let killstreak = [];
+let players = [];
 let battlelink = "";
 //when the websocket sends a message
 websocket.on("message", async function incoming(data) {
@@ -95,12 +98,10 @@ websocket.on("message", async function incoming(data) {
 		websocket.send(`|/trn iGLBot,128,${assertion}|`);
     }
 
-	let players = [];
 	let pokes1 = [];
 	let pokes2 = [];
 	let killer = "";
 	let victim = "";
-    let winner = "";
     let killJson = {};
     let deathJson = {};
     //removing the `-supereffective` line if it exists in realdata
@@ -119,7 +120,6 @@ websocket.on("message", async function incoming(data) {
             battlelink = line;
         
         else if (linenew.startsWith(`switch`)) {
-            console.log("SWITCH HERE ")
             if (linenew.includes("p1a")) p1a = parts[2].split(",")[0];
             else if (linenew.includes("p2a")) p2a = parts[2].split(",")[0];
         }
@@ -163,16 +163,22 @@ websocket.on("message", async function incoming(data) {
 
 		//|win|infernapeisawesome
 		else if (linenew.startsWith(`win`)) {
-			winner = parts[1];
-            console.log(winner + " won!");
+			let winner = parts[1];
+            console.log(`${winner} won!`);
             websocket.send(`/leave ${battlelink}`);
-            let loser = winner === players[0] ? players[1] : players[2];
+            let loser = ((winner === players[0]) ? players[1] : players[0]);
+            console.log(`${loser} lost!`);
 
             //updating the google sheet accordingly
-            let winSpreadsheetId, winTableName = getTableId(winner);
-            let winPokeInfo = getPokemonInfo(winSpreadsheetId, winTableName);
-            let loseSpreadsheetId, loseTableName = getTableId(loser);
-            let losePokeInfo = getPokemonInfo(loseSpreadsheetId, loseTableName);
+            let wintablenameArr = await getTableId(winner);
+            let winSpreadsheetId = wintablenameArr[0];
+            let winTableName = wintablenameArr[1];
+            let winPokeInfo = await getPokemonInfo(winSpreadsheetId, winTableName);
+
+            let losetablenameArr = await getTableId(loser);
+            let loseSpreadsheetId = losetablenameArr[0];
+            let loseTableName = losetablenameArr[1];
+            let losePokeInfo = await getPokemonInfo(loseSpreadsheetId, loseTableName);
 
             //creating requests to update spreadsheet with new info
             let winRequest = {
@@ -183,9 +189,9 @@ websocket.on("message", async function incoming(data) {
                 "valueInputOption": "USER_ENTERED",
                 "resource": {
                     "range": `${winTableName}!C9:I19`,
-                    "values": winPokeInfo.values
+                    "values": winPokeInfo.data
                 }
-            }
+            };
             let loseRequest = {
                 "spreadsheetId": loseSpreadsheetId,
                 "range": `${loseTableName}!C9:I19`,
@@ -194,27 +200,46 @@ websocket.on("message", async function incoming(data) {
                 "valueInputOption": "USER_ENTERED",
                 "resource": {
                     "range": `${loseTableName}!C9:I19`,
-                    "values": losePokeInfo.values
+                    "values": losePokeInfo.data
                 }
-            }
-            for (let i = 0; i < 10; i++) {
+            };
+            for (var i = 0; i < 10; i++) {        
+                let winPoke = winPokeInfo.data.values[i][0];
+                let losePoke = losePokeInfo.data.values[i][0];
+                //If the pokemon didn't die or it didn't kill anything
+                if (!winPoke in killJson) {
+                    killJson[winPoke] = 0;
+                }
+                if (!winPoke in deathJson) {
+                    deathJson[winPoke] = 0;
+                }
+                if (!losePoke in killJson) {
+                    killJson[losePoke] = 0;
+                }
+                if (!losePoke in deathJson) {
+                    deathJson[losePoke] = 0;
+                }
                 //updating winner pokemon info
-                winRequest.resource.values[i][5] += killJson[winPokeInfo.values[i][0]];
-                winRequest.resource.values[i][6] += deathJson[winPokeInfo.values[i][0]];
+                winRequest.resource.values.values[i][5] += killJson[winPoke];
+                winRequest.resource.values.values[i][6] += deathJson[winPoke];
                 //updating loser pokemon info
-                loseRequest.resource.values[i][5] += killJson[losePokeInfo.values[i][0]];
-                loseRequest.resource.values[i][6] += deathJson[losePokeInfo.values[i][0]];
+                loseRequest.resource.values.values[i][5] += killJson[losePoke];
+                loseRequest.resource.values.values[i][6] += deathJson[losePoke];
             }
 
             //updating pokemon info
-            updatePokemonInfo(winRequest);
-            updatePokemonInfo(loseRequest);
+            await updatePokemonInfo(winRequest);
+            await updatePokemonInfo(loseRequest);
 
             //resetting after every game
+            players = [];
 			dataArr = [];
             statusArr = [];
-            killstreak = [];
             battlelink = "";
+            pokes1 = [];
+            pokes2 = [];
+            killJson = {};
+            deathJson = {};
 		}
 	}
 });
@@ -229,20 +254,23 @@ bot.on("message", async message => {
 	else if (
 		channel.id === "658057669617254411" ||
 		channel.id === "658058064154329089" ||
-		channel.id === "657647109926813708"
+		channel.id === "657647109926813708" ||
+        channel.id === "603067258163560459"
 	) {
 		//separates given message into its parts
 		let msgStr = message.content;
 		let urls = Array.from(getUrls(msgStr)); //This is because getUrls returns a Set
 		let battleLink = urls[0]; //http://sports.psim.us/battle-gen8legacynationaldex-17597 format
 
-		//joins the battle linked
-		channel.send(`Joining the battle...`);
-		websocket.send(`|/join ${battleLink.substring(22)}`);
-		channel.send(`Battle joined! Keeping track of the stats now.`);
-		websocket.send(
-			`${battleLink.substring(22)}|Battle joined! Keeping track of the stats now.`
-		);
+        //joins the battle linked
+        if (urls) {
+            channel.send(`Joining the battle...`);
+            websocket.send(`|/join ${battleLink.substring(22)}`);
+            channel.send(`Battle joined! Keeping track of the stats now.`);
+            websocket.send(
+                `${battleLink.substring(22)}|Battle joined! Keeping track of the stats now.`
+            );
+        }
 	}
 });
 //making the bot login
@@ -266,9 +294,9 @@ async function login(nonce) {
 //Sheets function to do TODO something or other
 const sheets = google.sheets({
     version: 'v4',
-    auth: client
+    auth: api_key
 });
-function getTableId(showdownName) {
+async function getTableId(showdownName) {
     //"showdownName":"SHEETNAME"
     const majors = {
         "beastnugget35":"DS",
@@ -290,12 +318,12 @@ function getTableId(showdownName) {
     }
     const minors = {
         "GableGames":"MWM",
-        "russian runerussia":"RRG",
+        "Mother Runerussia":"RRG",
         "Fate LVL":"LVL",
         "Aaron12pkmn":"LSS",
         "Wolf iGL":"CKM",
         "JonnyGoldApple":"UUB",
-        "mexicanshyguy":"ARD",
+        "Mexicanshyguy":"ARD",
         "SnooZEA":"DDL",
         "joey34":"DSY",
         "Gen 4 Elitist":"G4E",
@@ -320,32 +348,45 @@ function getTableId(showdownName) {
         tableName = minors[showdownName];
     }
     else {
-        return "Invalid Showdown name";
+        return ["No SheetID", "Invalid Showdown name"];
     }
 
     //Gets info about the sheet
-    let spreadsheetId = `${isMajor ? "1Z0lFg8MFYONpMLia1jrAv9LC5MSJOJByRs3LDKxV0eI" : "1U85VJem_HDDXNCTB8954R1oCs9-ls6W0Micn2q6P-kE"}`;
-    return tableName, spreadsheetId;
+    let spreadsheetId = isMajor ? "1Z0lFg8MFYONpMLia1jrAv9LC5MSJOJByRs3LDKxV0eI" : "1U85VJem_HDDXNCTB8954R1oCs9-ls6W0Micn2q6P-kE";
+    let list = [spreadsheetId, tableName];
+    return list;
 }
 
-function getPokemonInfo(spreadsheetId, tableName) {
+async function getPokemonInfo(spreadsheetId, tableName) {
     let request = {
+        "auth": client,
         "spreadsheetId": spreadsheetId,
-        "range": `${tableName}!C9:I19`,
-        "valueRenderOption": "UNFORMATTED_VALUE",
-        "auth": client
+        "range": `${tableName}!C9:I19`
     }
-    let pokemonJson = sheets.spreadsheets.values.get(request, function(err, response) {
-        console.log("Response", response);
-        console.error("Execute error", err); 
+
+    let pokemonJson = await new Promise((resolve, reject) => {
+        sheets.spreadsheets.values.get(request, function(err, response) {
+            if(err) {
+                reject(err)
+            } else {
+                resolve(response)
+            }
+        });
     });
-    
+
     return pokemonJson;
 }
 
-function updatePokemonInfo(request) {
-    sheets.spreadsheets.values.update(request, function(err, response) {
-        console.log("Response", response);
-        console.error("Execute error", err); 
+async function updatePokemonInfo(request) {
+    let placeholder = await new Promise((resolve, reject) => {
+        sheets.spreadsheets.values.update(request, function(response, err) {
+            if(err) {
+                reject(err)
+            } else {
+                resolve(response)
+            } 
+        });
     });
+
+    return placeholder;
 }
