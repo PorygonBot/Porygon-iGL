@@ -1,0 +1,36 @@
+{
+  "name": "porygon",
+  "version": "1.0.0",
+  "description": "A Discord/Showdown/Google-Sheets bot that keeps track of deaths and kills as they happen live in a Pokemon Showdown battle.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "fs": "0.0.1-security",
+    "express": "4.17.1",
+    "ws": "7.2.1",
+    "path": "0.12.7",
+    "open": "7.0.0",
+    "axios": "0.19.0",
+    "discord.js": "11.5.1",
+    "get-urls": "9.2.0",
+    "googleapis": "46.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harbar20/iGL-Showdown-Bot.git"
+  },
+  "keywords": [
+    "porygon",
+    "pokemonshowdown",
+    "discord"
+  ],
+  "author": "@harbar20",
+  "license": "GNU",
+  "bugs": {
+    "url": "https://github.com/harbar20/Porygon/issues"
+  },
+  "homepage": "https://github.com/harbar20/Porygon#readme"
+}
