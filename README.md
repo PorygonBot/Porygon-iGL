@@ -1,13 +1,12 @@
 # Porygon v1.0
 ![](PorygonLogo.png)
 
-A Discord/Showdown/Google-Sheets bot that keeps track of deaths and kills as they happen live in a Pokemon Showdown battle.
+A Discord/Showdown/Google-Sheets bot that keeps track of deaths and kills as they happen live in a battle.
 This bot uses [sports.psim.us](http://sports.psim.us/) rather than the [official Showdown page](http://play.pokemonshowdown.com/).
 
 ## Usage
 If you're going to make your own version of the bot, then do the following to run it properly: 
 ```bash
-npm install
 node index.js
 ```
 
@@ -17,7 +16,8 @@ node index.js
 - MewsTheBest for the art
     - [Twitter](https://twitter.com/Mewsthebset)
     - [Portfolio](https://themewsthebest-portfolio.weebly.com/)
-- The [Pokefinium Discord Server](https://discord.gg/JPWHF7X) for inspiration
+- The Pokefinium Discord server for inspiration
+    - [Discord Server](https://discord.gg/JPWHF7X)
 
 ## Contributing
 Just make a PR or an issue, and I'll probably accept it.
