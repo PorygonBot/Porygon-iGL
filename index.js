@@ -160,8 +160,8 @@ websocket.on("message", async function incoming(data) {
         else if (linenew.startsWith(`win`)) {
             let winner = parts[1];
             console.log(`${winner} won!`);
-            console.log(`THIS IS THE BATTLELINK: ${battlelink}`);
-            websocket.send(`/leave ${battlelink}`);
+            console.log("Battle link: ", battlelink);
+            websocket.send(`${battlelink}|/savereplay`); //TODO finish this replay thing
             let loser = ((winner === players[players.length - 2]) ? players[players.length - 1] : players[players.length - 2]);
             console.log(`${loser} lost!`);
 
