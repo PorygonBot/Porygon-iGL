@@ -288,8 +288,7 @@ bot.on("message", async message => {
 
     //checks for help command
     if (msgStr.toLowerCase() === `${prefix} help`) {
-        let bicon = bot.user.displayAvatarURL; 
-        let hicon = bot.fetchUser(`399021249667399722`).avatarURL;
+        let bicon = bot.user.displayAvatarURL;
         let helpEmbed = new Discord.RichEmbed()
         .setTitle("Porygon Help")
         .setThumbnail(bicon)
@@ -347,26 +346,26 @@ async function getTableId(showdownName) {
         "pickle brine": "PPK"
     }
     const minors = {
-            "GableGames": "MWM",
-            "Mother Runerussia": "RRG",
-            "Fate LVL": "LVL",
-            "Aaron12pkmn": "LSS",
-            "Wolf iGL": "CKM",
-            "JonnyGoldApple": "UUB",
-            "Mexicanshyguy": "ARD",
-            "SnooZEA": "DDL",
-            "joey34": "DSY",
-            "Gen 4 elitist": "G4E",
-            "HalluNasty": "KCC",
-            "Hi I'm WoW": "WOW",
-            "ChampionDragonites": "ETD",
-            "infernapeisawesome": "SSR",
-            "metsrule97": "HT",
-            "Darkkstar": "BBF",
-            "dominicann": "MMT",
-            "RetroLikesMemes": "GRG"
-        }
-        //finding out the name of the Table as well as if the league is Minors or Majors
+        "GableGames": "MWM",
+        "Mother Runerussia": "RRG",
+        "Fate LVL": "LVL",
+        "Aaron12pkmn": "LSS",
+        "Wolf iGL": "CKM",
+        "JonnyGoldApple": "UUB",
+        "Mexicanshyguy": "ARD",
+        "SnooZEA": "DDL",
+        "joey34": "DSY",
+        "Gen 4 elitist": "G4E",
+        "HalluNasty": "KCC",
+        "Hi I'm WoW": "WOW",
+        "ChampionDragonites": "ETD",
+        "infernapeisawesome": "SSR",
+        "metsrule97": "HT",
+        "Darkkstar": "BBF",
+        "dominicann": "MMT",
+        "RetroLikesMemes": "GRG"
+    }
+    //finding out the name of the Table as well as if the league is Minors or Majors
     let tableName = "";
     let isMajor = false;
     if (majors[showdownName]) {
