@@ -12,7 +12,7 @@ const { google } = require("googleapis");
 //Constants required to make the program work as intended
 const plus = google.plus("v1");
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
-const { psUsername, psPassword, botToken, api_key } = require("./config.json");
+const { psUsername, psPassword, botToken, api_key, refreshToken } = require("./config.json");
 
 const keyfile = path.join(__dirname, "client_secret.json");
 const keys = JSON.parse(fs.readFileSync(keyfile));
@@ -51,7 +51,7 @@ app.get("/oauth2", (req, res) => {
         server.close();
     });
 });
-client.setCredentials()
+client.setCredentials({ refresh_token: refreshToken });
 
 const server = app.listen(3000, () => {
     // open the browser to the authorize url to start the workflow
